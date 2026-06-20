@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2022, Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2008-2026, Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,6 +28,8 @@
 #ifndef __LIBM_POLY_H__
 #define __LIBM_POLY_H__
 
+#include <libm/typehelper.h>
+#include <libm/poly-common.h>
 /*
 * poly = C0*r^0 + C1*r^1 + c2*r^2
 */
@@ -189,6 +191,12 @@
          q;                                                     \
          })
 
+#define POLY_EVAL_HORNER_7(x, c0, c1, c2, c3, c4, c5, c6) ({   \
+        __typeof(x) q = ((((((c6 * x + c5) * x + c4) * x + c3) \
+                        * x + c2)* x + c1) * x + c0);          \
+         q;                                                    \
+         })
+
 #define POLY_EVAL_HORNER_8(x, c0, c1, c2, c3, c4, c5, c6, c7) ({        \
         __typeof(x) q = (((((((c7 * x + c6) * x + c5) * x + c4) \
                         * x + c3)* x + c2) * x + c1) * x + c0); \
@@ -216,6 +224,31 @@
          q;                                                     \
          })
 
+#define POLY_EVAL_HORNER_10(x, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9) ({ \
+        __typeof(x) q = (((((((((c9 * x + c8) * x + c7) * x + c6) \
+                        * x + c5) * x + c4) * \
+                        x + c3)* x + c2) * x + c1)* x + c0);    \
+         q;                                                     \
+         })
+
+/* TODO: Keep one version of POLY_EVAL_HORNER_11 */
+#define POLY_EVAL_HORNER_11_1(x, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10) ({ \
+        __typeof(x) q = ((((((((((c10 * x + c9) * x + c8) *    \
+                        x + c7) * x + c6) * x + c5) * x + c4) * \
+                        x + c3)* x + c2) * x + c1)* x + c0);    \
+         q;                                                     \
+         })
+
+/* ToDo: Re-name to POLY_EVAL_HORNER_11 */
+#define POLY_EVAL_HORNER_11N(x, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10) ({  \
+        __typeof(x) q = ((((((((((c10 *x + c9) * x + c8) * x + c7) \
+                         * x + c6) * x + c5)* x + c4)            \
+                         * x + c3) * x + c2) * x + c1)           \
+                         *x + c0);                               \
+          q;                                                     \
+        })
+
+/* ToDo: Re-name to POLY_EVAL_HORNER_12 */
 #define POLY_EVAL_HORNER_11(x, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11) ({ \
         __typeof(x) q = (((((((((((                             \
                         c11 * x + c10) * x + c9) * x + c8) *    \
@@ -224,6 +257,7 @@
          q;                                                     \
          })
 
+/* ToDo: Re-name to POLY_EVAL_HORNER_13 */
 #define POLY_EVAL_HORNER_12(x, c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12) ({ \
         __typeof(x) q = ((((((((((((c12 * x +                   \
                         c11) * x + c10) * x + c9) * x + c8) *    \
@@ -668,6 +702,48 @@
         a1 = c0 + r2*a0;                                \
         a1;                                             \
         })        
+
+
+/*
+ * =============================================================================
+ * Double-Double Polynomial Evaluation Macros
+ * =============================================================================
+ * These macros evaluate polynomials using double-double arithmetic for
+ * extended precision. Coefficients are stored as double arrays but evaluated
+ * with approximately 106 bits of mantissa precision.
+ */
+
+/*
+ * Double-Double Horner polynomial evaluation (degree 5).
+ * Evaluates p(x) = c[5]*x^5 + c[4]*x^4 + ... + c[1]*x + c[0]
+ * using Horner's method with double-double precision.
+ */
+#define DD_POLY_EVAL_HORNER_6(x, c) ({                          \
+    dd_t _dd_r = dd_from_d((c)[5]);                             \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[4]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[3]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[2]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[1]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[0]);               \
+    _dd_r;                                                       \
+})
+
+/*
+ * Double-Double Horner polynomial evaluation (degree 6).
+ * Evaluates p(x) = c[6]*x^6 + c[5]*x^5 + ... + c[1]*x + c[0]
+ */
+#define DD_POLY_EVAL_HORNER_7(x, c) ({                          \
+    dd_t _dd_r = dd_from_d((c)[6]);                             \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[5]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[4]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[3]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[2]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[1]);               \
+    _dd_r = dd_add_d(dd_mul(_dd_r, (x)), (c)[0]);               \
+    _dd_r;                                                       \
+})
+
+
 
 #endif /* LIBM_POLY_H */
 

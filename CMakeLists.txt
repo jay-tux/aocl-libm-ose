@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2024-2025, Advanced Micro Devices. All rights reserved.
+# Copyright (C) 2024-2026, Advanced Micro Devices. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -106,8 +106,13 @@ message(DEBUG "Project with name \"${PROJECT_PREFIX}\" with version ${${PROJECT_
 if(NOT WIN32)
     set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> rc <TARGET> <LINK_FLAGS> <OBJECTS>")
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> rc <TARGET> <LINK_FLAGS> <OBJECTS>")
-    set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> rc <TARGET> <LINK_FLAGS> <OBJECTS>")
-    set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> rc <TARGET> <LINK_FLAGS> <OBJECTS>")
+
+    # Fix for large static libraries: CMake splits ar commands when the command line is too long,
+    # but the default append rule uses 'r' which replaces instead of appending.
+    # Set the append rule to use 'q' (quick append) to properly concatenate all object files.
+    set(CMAKE_C_ARCHIVE_APPEND "<CMAKE_AR> q <TARGET> <LINK_FLAGS> <OBJECTS>")
+    set(CMAKE_CXX_ARCHIVE_APPEND "<CMAKE_AR> q <TARGET> <LINK_FLAGS> <OBJECTS>")
+
     # Ensure ranlib is called after archive creation
     set(CMAKE_C_ARCHIVE_FINISH "<CMAKE_RANLIB> <TARGET>")
     set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> <TARGET>")
@@ -155,7 +160,11 @@ if(DEFINED ALM_STATIC_DISPATCH)
   endif()
 endif()
 
-if(LINUX)
+if(WIN32)
+    # Use AT&T assembly syntax on Windows (required for Clang 19+ compatibility)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -masm=att")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -masm=att")
+else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fmacro-prefix-map=${PROJECT_SOURCE_DIR}/=.")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmacro-prefix-map=${PROJECT_SOURCE_DIR}/=.")
 endif()
@@ -267,6 +276,13 @@ if(${${PROJECT_PREFIX}_LIBM_BUILD_LIBRARY})
     if(${CMAKE_BUILD_TYPE} STREQUAL "Release")
         set(ALM_PATH        "${${PROJECT_PREFIX}_INSTALL_DIR}/lib")
     endif()
+endif()
+
+#----------------------------------------------------------
+# Add libm_testsuite if LIBM_BUILD_TESTSUITE is enabled
+#----------------------------------------------------------
+if (${${PROJECT_PREFIX}_LIBM_BUILD_TESTSUITE})
+    add_subdirectory(almbench EXCLUDE_FROM_ALL)
 endif()
 
 #------------------------------
